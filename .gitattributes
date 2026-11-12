@@ -1,0 +1,2 @@
+# Keep the native workflow mirror byte-identical to the bundled LF template.
+/workflows/native/workflow.md text eol=lf

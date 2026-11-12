@@ -113,6 +113,7 @@ Load `trellis-brainstorm`; stay in planning.
 Lightweight: `prd.md` can be enough. Complex: finish `prd.md`, `design.md`, and `implement.md`; ask for review before `task.py start`.
 Multi-deliverable scope: consider a parent task plus independently verifiable child tasks; dependencies must be written in child artifacts, not implied by tree position.
 Channel-worker mode: curate `implement.jsonl` and `check.jsonl` as spec/research manifests before start.
+Main session: save decision-relevant external evidence promptly and link it in `prd.md` / `## Research`; explain no research or applicable reuse. Research workers stay in their assigned research scope.
 [/workflow-state:planning]
 
 [workflow-state:planning-inline]
@@ -120,6 +121,7 @@ Load `trellis-brainstorm`; stay in planning.
 Lightweight: `prd.md` can be enough. Complex: finish `prd.md`, `design.md`, and `implement.md`; ask for review before `task.py start`.
 Multi-deliverable scope: consider a parent task plus independently verifiable child tasks; dependencies must be written in child artifacts, not implied by tree position.
 Inline mode: skip jsonl curation; Phase 2 reads artifacts/specs via `trellis-before-dev`.
+Main session: save decision-relevant external evidence promptly and link it in `prd.md` / `## Research`; explain no research or applicable reuse. Research workers stay in their assigned research scope.
 [/workflow-state:planning-inline]
 
 ### Phase 2: Execute
@@ -134,12 +136,14 @@ Channel-driven sub-agent dispatch is the default execution model for this workfl
 Flow: channel-driven `implement` worker -> channel-driven `check` worker -> `trellis-update-spec` -> commit (Phase 3.4) -> `/trellis:finish-work`.
 Main-session default: use `trellis channel spawn` with `.trellis/agents/implement.md` and `.trellis/agents/check.md`; do not use native Claude Task / Codex sub_agent unless explicitly requested or host-only tools require it.
 Worker context order: jsonl entries -> `prd.md` -> `design.md if present` -> `implement.md if present`. Use stable worker handles such as `implement`, `check`, `check-cx`, `check-cc`; read results with `trellis channel messages --raw` when precision matters.
+Main session: save and integrate decision-changing research before adopting it; return to planning for changed agreed results. Implement/check workers report source, finding and impact; this reminder does not authorize rewriting task planning. Research workers save only assigned research and return its path.
 [/workflow-state:in_progress]
 
 [workflow-state:in_progress-inline]
 Flow: `trellis-before-dev` -> edit -> channel-driven `check` worker -> validation -> `trellis-update-spec` -> commit (Phase 3.4) -> `/trellis:finish-work`.
 Inline implementation is allowed only when the user asked for it or the change is too small to justify a worker. After editing, prefer `trellis channel spawn --agent check` for independent review.
 Read context before editing: `prd.md` -> `design.md if present` -> `implement.md if present`, plus relevant spec/research loaded by skills.
+Main session: save and integrate decision-changing research before adopting it; return to planning for changed agreed results. Implement/check workers report source, finding and impact; this reminder does not authorize rewriting task planning. Research workers save only assigned research and return its path.
 [/workflow-state:in_progress-inline]
 
 ### Phase 3: Finish
@@ -217,6 +221,22 @@ Requirements:
 
 When research is needed, write results to `{TASK_DIR}/research/`. Research files must be usable by later workers.
 
+**Decision evidence and handoff**:
+- Save only necessary facts and accessible source identifiers. Remove credentials and unrelated personal data, respect project access boundaries, and do not persist unrelated raw request/response payloads.
+- Record external evidence when it supports, rejects, or changes a task decision, whether from web sources, local third-party dependencies, user-provided material, or experiments. Routine project-code reading and unrelated browsing do not require a research log.
+- Save useful findings before presenting or acting on the conclusion, not just at session end. Reuse a topic file under `research/`; no fixed filename, headings, length, or operation count is required.
+- Include the question, locatable sources, conclusion and limits, decision impact, and unresolved issues. Distinguish observed facts, inference, and unknowns; record alternatives and rejection reasons only when actually compared. For version-sensitive claims, identify the relevant version/commit or access date. Local dependencies need identity/version and file/symbol locations; user material must be attributed, and experiments need reproducible conditions, steps, and observations.
+- Keep key conclusions and links in `prd.md` under `## Research`; cite the same record beside affected design decisions. State why no external research is needed, or why existing research remains applicable, rather than creating empty files. Not yet researched, no reliable answer found, and no research needed are different states.
+- Record source conflicts and unknowns with their effect and next action; not finding an answer does not prove a capability absent. If an unknown changes scope, behavior, compatibility, risk, or acceptance, return to planning rather than claim readiness. When new evidence replaces a conclusion, update the record, decisions, and references so the current conclusion is clear.
+- Task-document links resolve relative to their document; manifest `file` paths resolve from the repository root. Select research for each role, not every report for every worker. Missing or stale critical evidence must be surfaced, not silently skipped.
+- These are model instructions and review requirements, not automatic capture, semantic scoring, or new `task.py start` refusal conditions. A file or link alone does not establish evidence quality.
+
+When using a research worker, follow this dispatch contract:
+
+- **Dispatch prompt guard**: Start with `Active task: <task path>`; provide the specific question, assigned `research/<topic>.md` path, and minimum content: locatable sources, conclusion/limits, decision impact, and facts/inferences/unknowns. If task identity is missing or ambiguous, return to the main session rather than guess.
+- **Return and integration**: Research workers write only within their assigned research scope and return a path plus summary. The main session must actually read the file, check the question, sources, conclusion and limits, decision impact, and distinction between facts, inferences and unknowns; request missing content before integrating the conclusion into `prd.md` / `design.md`.
+
+
 #### 1.3 Configure context `[required · once]`
 
 Curate worker context manifests:
@@ -224,9 +244,11 @@ Curate worker context manifests:
 - `implement.jsonl` — specs and research needed by the implementation worker.
 - `check.jsonl` — quality specs, test specs, and research needed by the check worker.
 
-Do not put code files in jsonl. Workers read code during execution.
+Do not put code files in jsonl. Workers read code during execution. Select the decision-relevant research each role needs and verify the paths; manifest `file` paths are repository-root relative. A file existing under `research/` does not mean a worker received or read it.
 
 #### 1.4 Activate task `[required · once]`
+
+Before the existing start review, check `prd.md` / `## Research`: required evidence is saved or reusable, citations are locatable, facts/inferences/unknowns are distinguishable, and result-affecting unknowns have been handled. Explain why research is unnecessary when applicable. This is a review requirement, not an additional script gate.
 
 After artifact review, start the task:
 
@@ -239,6 +261,7 @@ python3 ./.trellis/scripts/task.py start <task-dir>
 | Condition | Required |
 | --- | :---: |
 | `prd.md` exists | yes |
+| Decision-relevant evidence is saved and linked, or no research / reuse is explained; critical unknowns are handled | yes |
 | user confirms task should enter implementation | yes |
 | `task.py start` has run | yes |
 | `design.md` exists for complex tasks | yes |
@@ -254,6 +277,8 @@ Runtime consumers tolerate missing or seed-only manifests for compatibility, but
 Goal: the main session turns reviewed planning artifacts into checked code through channel workers.
 
 #### 2.1 Implement `[required · repeatable]`
+
+Before implementation, actually read the decision-relevant research and its limits, through the role manifest or task links; merely finding a path is not enough. Before checking, compare key decisions and acceptance claims with their cited evidence and unresolved issues. Implementation/check workers report new decision-changing evidence (source, finding, impact) to the main session; a general reminder does not authorize rewriting task planning. The main session saves and integrates it, or assigns follow-up research, before adopting it. Preserve each worker's explicitly assigned code/test write scope.
 
 [Claude Code, Cursor, OpenCode, codex-sub-agent, Kiro, Gemini, Qoder, CodeBuddy, Copilot, Droid, Pi]
 
@@ -293,6 +318,8 @@ Native sub-agent fallback is allowed only when the user explicitly asks for it o
 [/codex-inline, Kilo, Antigravity, Devin]
 
 #### 2.2 Quality check `[required · repeatable]`
+
+Actually read the check-role research; review key decisions against locatable sources, versions/limits and unresolved issues. Missing or stale evidence that can change the agreed result returns to planning; do not pass merely because a file exists.
 
 [Claude Code, Cursor, OpenCode, codex-sub-agent, Kiro, Gemini, Qoder, CodeBuddy, Copilot, Droid, Pi]
 
@@ -336,6 +363,8 @@ Load `trellis-check` or use a channel-driven check worker. If issues are found, 
 [/codex-inline, Kilo, Antigravity, Devin]
 
 #### 2.3 Rollback `[on demand]`
+
+When follow-up research changes a decision, save the findings and update the research entry, affected decisions, citations and role manifests. Mark replaced conclusions; changes to agreed scope, behavior, compatibility, risk or acceptance return to planning and review.
 
 - If check finds a PRD defect -> return to Phase 1, fix artifacts, then execute again.
 - If an implement worker goes off-track -> narrow the brief, redispatch, or revert that work.
