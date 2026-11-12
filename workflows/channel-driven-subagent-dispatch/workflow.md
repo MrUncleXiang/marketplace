@@ -33,7 +33,7 @@ python3 ./.trellis/scripts/get_context.py --mode packages
 
 ### Task System
 
-Each task has its own directory under `.trellis/tasks/{MM-DD-name}/` with `task.json`, `prd.md`, optional `design.md`, optional `implement.md`, optional `research/`, and `implement.jsonl` / `check.jsonl`.
+Each task has its own directory under `.trellis/tasks/{MM-DD-name}/` with `task.json`, `prd.md`, `design.md`, `implement.md`, optional `research/`, and `implement.jsonl` / `check.jsonl`.
 
 Common commands:
 
@@ -83,11 +83,11 @@ Phase 3: Finish  -> verify, update spec, commit, and wrap up
 ### Planning Artifacts
 
 - `prd.md` — requirements, constraints, and acceptance criteria.
-- `design.md` — technical design for complex tasks.
-- `implement.md` — execution plan, validation commands, review gates, and rollback points for complex tasks.
+- `design.md` — technical design for every new task.
+- `implement.md` — execution plan, validation commands, review gates, and rollback points for every new task.
 - `implement.jsonl` / `check.jsonl` — worker context manifests. Put spec and research files here, not code files.
 
-Lightweight tasks may be PRD-only. Complex tasks must have `prd.md`, `design.md`, and `implement.md` before `task.py start`.
+Every new task must have concise `prd.md`, `design.md`, and `implement.md` before first `task.py start`; no fixed sections or word counts are required.
 
 ### Parent / Child Task Trees
 
@@ -110,7 +110,7 @@ Complex task: ask the user if you can create a Trellis task and enter the planni
 
 [workflow-state:planning]
 Load `trellis-brainstorm`; stay in planning.
-Lightweight: `prd.md` can be enough. Complex: finish `prd.md`, `design.md`, and `implement.md`; ask for review before `task.py start`.
+Finish all three concise planning files, attest and validate, show the reviewed version, and obtain confirmation before version-specific `task.py start`.
 Multi-deliverable scope: consider a parent task plus independently verifiable child tasks; dependencies must be written in child artifacts, not implied by tree position.
 Channel-worker mode: curate `implement.jsonl` and `check.jsonl` as spec/research manifests before start.
 Main session: save decision-relevant external evidence promptly and link it in `prd.md` / `## Research`; explain no research or applicable reuse. Research workers stay in their assigned research scope.
@@ -118,7 +118,7 @@ Main session: save decision-relevant external evidence promptly and link it in `
 
 [workflow-state:planning-inline]
 Load `trellis-brainstorm`; stay in planning.
-Lightweight: `prd.md` can be enough. Complex: finish `prd.md`, `design.md`, and `implement.md`; ask for review before `task.py start`.
+Finish all three concise planning files, attest and validate, show the reviewed version, and obtain confirmation before version-specific `task.py start`.
 Multi-deliverable scope: consider a parent task plus independently verifiable child tasks; dependencies must be written in child artifacts, not implied by tree position.
 Inline mode: skip jsonl curation; Phase 2 reads artifacts/specs via `trellis-before-dev`.
 Main session: save decision-relevant external evidence promptly and link it in `prd.md` / `## Research`; explain no research or applicable reuse. Research workers stay in their assigned research scope.
@@ -135,14 +135,14 @@ Channel-driven sub-agent dispatch is the default execution model for this workfl
 [workflow-state:in_progress]
 Flow: channel-driven `implement` worker -> channel-driven `check` worker -> `trellis-update-spec` -> commit (Phase 3.4) -> `/trellis:finish-work`.
 Main-session default: use `trellis channel spawn` with `.trellis/agents/implement.md` and `.trellis/agents/check.md`; do not use native Claude Task / Codex sub_agent unless explicitly requested or host-only tools require it.
-Worker context order: jsonl entries -> `prd.md` -> `design.md if present` -> `implement.md if present`. Use stable worker handles such as `implement`, `check`, `check-cx`, `check-cc`; read results with `trellis channel messages --raw` when precision matters.
+Worker context order: jsonl entries -> `prd.md` -> `design.md` -> `implement.md`. Use stable worker handles such as `implement`, `check`, `check-cx`, `check-cc`; read results with `trellis channel messages --raw` when precision matters.
 Main session: save and integrate decision-changing research before adopting it; return to planning for changed agreed results. Implement/check workers report source, finding and impact; this reminder does not authorize rewriting task planning. Research workers save only assigned research and return its path.
 [/workflow-state:in_progress]
 
 [workflow-state:in_progress-inline]
 Flow: `trellis-before-dev` -> edit -> channel-driven `check` worker -> validation -> `trellis-update-spec` -> commit (Phase 3.4) -> `/trellis:finish-work`.
 Inline implementation is allowed only when the user asked for it or the change is too small to justify a worker. After editing, prefer `trellis channel spawn --agent check` for independent review.
-Read context before editing: `prd.md` -> `design.md if present` -> `implement.md if present`, plus relevant spec/research loaded by skills.
+Read context before editing: `prd.md` -> `design.md` -> `implement.md`, plus relevant spec/research loaded by skills.
 Main session: save and integrate decision-changing research before adopting it; return to planning for changed agreed results. Implement/check workers report source, finding and impact; this reminder does not authorize rewriting task planning. Research workers save only assigned research and return its path.
 [/workflow-state:in_progress-inline]
 
@@ -264,8 +264,8 @@ python3 ./.trellis/scripts/task.py start <task-dir>
 | Decision-relevant evidence is saved and linked, or no research / reuse is explained; critical unknowns are handled | yes |
 | user confirms task should enter implementation | yes |
 | `task.py start` has run | yes |
-| `design.md` exists for complex tasks | yes |
-| `implement.md` exists for complex tasks | yes |
+| `design.md` exists for every new task | yes |
+| `implement.md` exists for every new task | yes |
 | `implement.jsonl` and `check.jsonl` each contain at least one real curated entry (seed row does not count) | yes |
 
 Runtime consumers tolerate missing or seed-only manifests for compatibility, but that tolerance is not a planning-ready state.
@@ -277,6 +277,8 @@ Runtime consumers tolerate missing or seed-only manifests for compatibility, but
 Goal: the main session turns reviewed planning artifacts into checked code through channel workers.
 
 #### 2.1 Implement `[required · repeatable]`
+
+Before this step, if requirements/design/plan materially changed, pause affected work, run `task.py replan`, update the three planning files and repeat 1.4 confirmation. Normal coding, tests and fixes within the approved requirements continue. Record progress separately from the reviewed plan.
 
 Before implementation, actually read the decision-relevant research and its limits, through the role manifest or task links; merely finding a path is not enough. Before checking, compare key decisions and acceptance claims with their cited evidence and unresolved issues. Implementation/check workers report new decision-changing evidence (source, finding, impact) to the main session; a general reminder does not authorize rewriting task planning. The main session saves and integrates it, or assigns follow-up research, before adopting it. Preserve each worker's explicitly assigned code/test write scope.
 
@@ -301,7 +303,7 @@ trellis channel wait impl-<topic> --as main --kind done --from implement --timeo
 trellis channel messages impl-<topic> --raw --from implement --last 20
 ```
 
-Omit the `design.md` or `implement.md` `--file` when the file does not exist. The brief must state the worker goal, forbidden actions, validation commands, and expected completion summary.
+Every new task must provide all three files. If any is missing, return to planning before dispatching affected work. Only a verified legacy in-progress/review task with all planning metadata keys absent may use the available historical files without backfilling. The brief must state the worker goal, forbidden actions, validation commands, and expected completion summary.
 
 Native sub-agent fallback is allowed only when the user explicitly asks for it or a host-only capability is required.
 
@@ -310,7 +312,7 @@ Native sub-agent fallback is allowed only when the user explicitly asks for it o
 [codex-inline, Kilo, Antigravity, Devin]
 
 1. Load `trellis-before-dev`.
-2. Read `prd.md`, then `design.md` if present, then `implement.md` if present.
+2. Read `prd.md`, then `design.md`, then `implement.md`.
 3. Read relevant research.
 4. Small changes may be implemented inline; larger changes should still use a channel worker.
 5. After implementation, enter channel-driven check.
@@ -318,6 +320,8 @@ Native sub-agent fallback is allowed only when the user explicitly asks for it o
 [/codex-inline, Kilo, Antigravity, Devin]
 
 #### 2.2 Quality check `[required · repeatable]`
+
+Before this step, if requirements/design/plan materially changed, pause affected work, run `task.py replan`, update the three planning files and repeat 1.4 confirmation. Normal coding, tests and fixes within the approved requirements continue. Record progress separately from the reviewed plan.
 
 Actually read the check-role research; review key decisions against locatable sources, versions/limits and unresolved issues. Missing or stale evidence that can change the agreed result returns to planning; do not pass merely because a file exists.
 
@@ -426,3 +430,21 @@ Add:
 ```
 
 A lifecycle hook or script must write `task.json.status` to that value, otherwise the block is never read.
+
+
+## Reviewed planning version and material changes
+
+For every new task, prepare readable, nonempty `prd.md` (requirements), `design.md` (solution), and `implement.md` (implementation and verification order). Keep each concise; the topics above are guidance, not required headings or word counts. Read all three together and resolve contradictions. File presence or a successful script cannot assess meaning or prove user identity.
+
+Before first start or start after replanning:
+
+1. Check the three files and decision-relevant research, then run `task.py attest <task-dir> --note "what was reviewed"`.
+2. Run `task.py validate <task-dir>`. A waiting version may validate successfully but is still not approved.
+3. Show the user the complete `reviewId`, explanation, and a plain-language summary of scope, solution, verification and limits. Append the summary, original three fingerprints, changes and real response/source to `<task-dir>/research/planning-review-log.md`; do not overwrite older rounds or invent message identifiers. Preserve the old review log before clearing records with replan; if saving fails, address that first. Full historical text requires version control; fingerprints cannot restore overwritten text.
+4. Only after the user's explicit response to that version, recheck and run `task.py start <task-dir> --review <reviewId> --approval-note "actual response" --approval-source "locatable conversation source"`. Ordinary attest always creates a new version and clears prior approval; recomputing hashes cannot grant permission.
+
+If requirements, design or the implementation plan materially change, including a change agreed in conversation, pause affected work and dispatched dependencies. Run `task.py replan <task-dir> --reason "what changed" --affected "work to pause" --independent "work that does not depend on the change, or none"`, update the three files and repeat review/confirmation. State why any continuing work is independent; that field does not grant new authorization. Keep normal coding, testing and fixes within the approved requirements moving. Record normal progress separately without checking off the frozen reviewed plan.
+
+For a verified wording-only correction after start, use `task.py attest <task-dir> --editorial --note "specific correction; behavior and scope unchanged"`; preserve the reviewed version and confirmation. If the user has already responded but first start is not recorded, add `--editorial-note "specific correction"` to that same version-specific start. Inspect the actual diff; neither command can determine whether a purported wording correction changes meaning.
+
+Only `in_progress`/`review` tasks with all three planning metadata keys absent may resume through the legacy path without backfilling the files. Partial, null or malformed records are not legacy. Completed tasks cannot start again. Same-task writes are serialized by the main session; concurrency and exactly-once hooks are not promised. Session hints query `task.py planning-status <task-dir> --json`; unavailable checks never imply permission to start. New records must match the current files on resume. Archive planning problems warn while existing archive checks remain in force.
